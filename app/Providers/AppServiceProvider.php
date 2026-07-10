@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Osiset\ShopifyApp\Http\Middleware\IframeProtection as VendorIframeProtection;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -11,7 +12,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(VendorIframeProtection::class, \App\Http\Middleware\IframeProtection::class);
     }
 
     /**
