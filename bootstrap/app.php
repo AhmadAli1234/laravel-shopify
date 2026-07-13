@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // the request is HTTPS (needed for secure session cookies to work
         // correctly while the app is embedded in the Shopify Admin iframe).
         $middleware->trustProxies(at: '*');
+
+        $middleware->web(append: [
+            \App\Http\Middleware\EnsureShopifyConfigured::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

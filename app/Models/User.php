@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Osiset\ShopifyApp\Contracts\ShopModel as IShopModel;
@@ -29,5 +30,30 @@ class User extends Authenticatable implements IShopModel
         return [
             'email_verified_at' => 'datetime',
         ];
+    }
+
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class, 'shop_id');
+    }
+
+    public function customers(): HasMany
+    {
+        return $this->hasMany(Customer::class, 'shop_id');
+    }
+
+    public function collections(): HasMany
+    {
+        return $this->hasMany(Collection::class, 'shop_id');
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'shop_id');
+    }
+
+    public function discounts(): HasMany
+    {
+        return $this->hasMany(Discount::class, 'shop_id');
     }
 }

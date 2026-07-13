@@ -1,5 +1,12 @@
 <?php
 
+// Placeholder - config files load before the database connection exists, so
+// the real (database-configured) App URL can't be read here directly. It
+// gets substituted in by App\Providers\AppServiceProvider::boot(), which
+// runs after the DB is available. See App\Models\AppSetting::app_url and
+// the Settings page.
+$shopifyAppUrl = '';
+
 return [
     /*
     |--------------------------------------------------------------------------
@@ -410,7 +417,7 @@ return [
 
     'listen' => [
         \Osiset\ShopifyApp\Messaging\Events\AppInstalledEvent::class => [
-            // \App\Listeners\MyListener::class,
+            \App\Listeners\Shopify\BackfillShopDataOnInstall::class,
         ],
         \Osiset\ShopifyApp\Messaging\Events\ShopAuthenticatedEvent::class => [
             // \App\Listeners\MyListener::class,
@@ -419,7 +426,7 @@ return [
             // \App\Listeners\MyListener::class,
         ],
         \Osiset\ShopifyApp\Messaging\Events\AppUninstalledEvent::class => [
-            // \App\Listeners\MyListener::class,
+            \App\Listeners\Shopify\CleanupShopDataOnUninstall::class,
         ],
         \Osiset\ShopifyApp\Messaging\Events\PlanActivatedEvent::class => [
             // \App\Listeners\MyListener::class,
@@ -441,22 +448,115 @@ return [
     */
 
     'webhooks' => [
-        /*
-            [
-                'topic' => env('SHOPIFY_WEBHOOK_1_TOPIC', 'ORDERS_CREATE'),
-                'address' => env('SHOPIFY_WEBHOOK_1_ADDRESS', 'https://example.com/webhook/orders-create')
-            ], [
-                'topic' => env('SHOPIFY_WEBHOOK_2_TOPIC', 'APP_PURCHASES_ONE_TIME_UPDATE'),
-                'address' => env('SHOPIFY_WEBHOOK_2_ADDRESS', 'https://example.com/webhook/purchase'),
-            ]
-            // In certain situations you may wish to map the webhook to a specific class
-            // To do this, change the array to an associative array with a 'class' key
-            'orders-create' => [
-                'topic' => env('SHOPIFY_WEBHOOK_3_TOPIC', 'ORDERS_PAID'),
-                'address' => env('SHOPIFY_WEBHOOK_3_ADDRESS', 'https://example.com/webhook/orders-create'),
-                'class' => \App\Shopify\Actions\ExampleAppJob::class
-            ],
-        */],
+        'products-create' => [
+            'topic' => 'PRODUCTS_CREATE',
+            'address' => $shopifyAppUrl.'/webhook/products-create',
+            'class' => \App\Jobs\Shopify\SyncProductJob::class,
+        ],
+        'products-update' => [
+            'topic' => 'PRODUCTS_UPDATE',
+            'address' => $shopifyAppUrl.'/webhook/products-update',
+            'class' => \App\Jobs\Shopify\SyncProductJob::class,
+        ],
+        'products-delete' => [
+            'topic' => 'PRODUCTS_DELETE',
+            'address' => $shopifyAppUrl.'/webhook/products-delete',
+            'class' => \App\Jobs\Shopify\DeleteProductJob::class,
+        ],
+        'inventory-levels-update' => [
+            'topic' => 'INVENTORY_LEVELS_UPDATE',
+            'address' => $shopifyAppUrl.'/webhook/inventory-levels-update',
+            'class' => \App\Jobs\Shopify\SyncInventoryLevelJob::class,
+        ],
+        'app-uninstalled' => [
+            'topic' => 'APP_UNINSTALLED',
+            'address' => $shopifyAppUrl.'/webhook/app-uninstalled',
+            // Vendor's own job: purges the shop's token/plan and soft-deletes
+            // it, then fires AppUninstalledEvent (see 'listen' above) which
+            // is what triggers our own product cache cleanup.
+            'class' => \Osiset\ShopifyApp\Messaging\Jobs\AppUninstalledJob::class,
+        ],
+        'customers-create' => [
+            'topic' => 'CUSTOMERS_CREATE',
+            'address' => $shopifyAppUrl.'/webhook/customers-create',
+            'class' => \App\Jobs\Shopify\SyncCustomerJob::class,
+        ],
+        'customers-update' => [
+            'topic' => 'CUSTOMERS_UPDATE',
+            'address' => $shopifyAppUrl.'/webhook/customers-update',
+            'class' => \App\Jobs\Shopify\SyncCustomerJob::class,
+        ],
+        'customers-delete' => [
+            'topic' => 'CUSTOMERS_DELETE',
+            'address' => $shopifyAppUrl.'/webhook/customers-delete',
+            'class' => \App\Jobs\Shopify\DeleteCustomerJob::class,
+        ],
+        'collections-create' => [
+            'topic' => 'COLLECTIONS_CREATE',
+            'address' => $shopifyAppUrl.'/webhook/collections-create',
+            'class' => \App\Jobs\Shopify\SyncCollectionJob::class,
+        ],
+        'collections-update' => [
+            'topic' => 'COLLECTIONS_UPDATE',
+            'address' => $shopifyAppUrl.'/webhook/collections-update',
+            'class' => \App\Jobs\Shopify\SyncCollectionJob::class,
+        ],
+        'collections-delete' => [
+            'topic' => 'COLLECTIONS_DELETE',
+            'address' => $shopifyAppUrl.'/webhook/collections-delete',
+            'class' => \App\Jobs\Shopify\DeleteCollectionJob::class,
+        ],
+        'orders-create' => [
+            'topic' => 'ORDERS_CREATE',
+            'address' => $shopifyAppUrl.'/webhook/orders-create',
+            'class' => \App\Jobs\Shopify\SyncOrderJob::class,
+        ],
+        'orders-updated' => [
+            'topic' => 'ORDERS_UPDATED',
+            'address' => $shopifyAppUrl.'/webhook/orders-updated',
+            'class' => \App\Jobs\Shopify\SyncOrderJob::class,
+        ],
+        'orders-delete' => [
+            'topic' => 'ORDERS_DELETE',
+            'address' => $shopifyAppUrl.'/webhook/orders-delete',
+            'class' => \App\Jobs\Shopify\DeleteOrderJob::class,
+        ],
+        'orders-cancelled' => [
+            'topic' => 'ORDERS_CANCELLED',
+            'address' => $shopifyAppUrl.'/webhook/orders-cancelled',
+            'class' => \App\Jobs\Shopify\SyncOrderJob::class,
+        ],
+        'fulfillments-create' => [
+            'topic' => 'FULFILLMENTS_CREATE',
+            'address' => $shopifyAppUrl.'/webhook/fulfillments-create',
+            'class' => \App\Jobs\Shopify\SyncFulfillmentJob::class,
+        ],
+        'fulfillments-update' => [
+            'topic' => 'FULFILLMENTS_UPDATE',
+            'address' => $shopifyAppUrl.'/webhook/fulfillments-update',
+            'class' => \App\Jobs\Shopify\SyncFulfillmentJob::class,
+        ],
+        'order-transactions-create' => [
+            'topic' => 'ORDER_TRANSACTIONS_CREATE',
+            'address' => $shopifyAppUrl.'/webhook/order-transactions-create',
+            'class' => \App\Jobs\Shopify\SyncTransactionJob::class,
+        ],
+        'discounts-create' => [
+            'topic' => 'DISCOUNTS_CREATE',
+            'address' => $shopifyAppUrl.'/webhook/discounts-create',
+            'class' => \App\Jobs\Shopify\SyncDiscountJob::class,
+        ],
+        'discounts-update' => [
+            'topic' => 'DISCOUNTS_UPDATE',
+            'address' => $shopifyAppUrl.'/webhook/discounts-update',
+            'class' => \App\Jobs\Shopify\SyncDiscountJob::class,
+        ],
+        'discounts-delete' => [
+            'topic' => 'DISCOUNTS_DELETE',
+            'address' => $shopifyAppUrl.'/webhook/discounts-delete',
+            'class' => \App\Jobs\Shopify\DeleteDiscountJob::class,
+        ],
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -546,7 +646,7 @@ return [
     |
     */
 
-    'config_api_callback' => null,
+    'config_api_callback' => [\App\Services\ShopifySettingsResolver::class, 'resolve'],
 
     /*
     |--------------------------------------------------------------------------

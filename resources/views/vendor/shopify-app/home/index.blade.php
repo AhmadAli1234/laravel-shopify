@@ -1,26 +1,11 @@
-@extends('shopify-app::layouts.default')
-
-@section('styles')
-    @include('shopify-app::partials.laravel_skeleton_css')
-@endsection
-
-@section('content')
-    <ui-title-bar title="Welcome"></ui-title-bar>
-
-    <div class="flex-center position-ref full-height">
-        <div class="content">
-            <div class="title m-b-md">
-                Laravel &amp; Shopify
-            </div>
-
-            <p>Welcome to your Shopify App powered by Laravel.</p>
-            <p>&nbsp;</p>
-            <p>{{ $shop->name }}</p>
-            <p>&nbsp;</p>
-
-            <div class="links">
-                <a href="{{ route('products.index', ['shop' => $shop->name, 'host' => request('host')]) }}">View Products</a>
-            </div>
-        </div>
-    </div>
-@endsection
+{{-- Dispatcher: shows the live sync-progress screen while the post-install
+     backfill is still running (see App\Services\SyncProgressTracker and
+     App\Listeners\Shopify\BackfillShopDataOnInstall), otherwise the normal
+     dashboard. Deliberately not using a conditional @extends here - Blade
+     doesn't handle that reliably - each branch renders its own complete,
+     independent view instead. --}}
+@if (\App\Services\SyncProgressTracker::isRunning($shop->id))
+    {!! view('partials.syncing', ['shop' => $shop])->render() !!}
+@else
+    {!! view('dashboard', ['shop' => $shop])->render() !!}
+@endif

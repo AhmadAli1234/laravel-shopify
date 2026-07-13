@@ -1,0 +1,2 @@
+@echo off
+powershell -NoProfile -Command "$running = Get-CimInstance Win32_Process -Filter \"Name='php.exe'\" | Where-Object { $_.CommandLine -like '*queue:work*' }; if (-not $running) { Start-Process -FilePath 'D:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe' -ArgumentList 'artisan','queue:work','redis','--queue=default,webhooks','--tries=3','--backoff=5' -WorkingDirectory 'D:\laragon\www\laravel-shopify' -WindowStyle Hidden }"
