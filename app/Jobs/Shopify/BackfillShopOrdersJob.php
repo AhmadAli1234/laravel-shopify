@@ -16,6 +16,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
@@ -211,7 +212,8 @@ class BackfillShopOrdersJob implements ShouldQueue
 
                 foreach ($node['lineItems']['edges'] ?? [] as $lineItemEdge) {
                     $lineItemNode = $lineItemEdge['node'];
-                    $lineItemId = (int) Str::afterLast($lineItemNode['id'], '/');
+                    $rawGid = $lineItemNode['id'];
+                    $lineItemId = (int) Str::afterLast($rawGid, '/');
 
                     $productId = isset($lineItemNode['product']['legacyResourceId'])
                         ? Product::where('shop_id', $shop->id)
@@ -224,17 +226,43 @@ class BackfillShopOrdersJob implements ShouldQueue
                             ->value('id')
                         : null;
 
-                    OrderLineItem::updateOrCreate(
-                        ['order_id' => $order->id, 'shopify_line_item_id' => $lineItemId],
-                        [
-                            'product_id' => $productId,
-                            'product_variant_id' => $variantId,
-                            'title' => $lineItemNode['title'] ?? null,
-                            'sku' => $lineItemNode['sku'] ?? null,
-                            'quantity' => $lineItemNode['quantity'] ?? null,
-                            'price' => $lineItemNode['originalUnitPriceSet']['shopMoney']['amount'] ?? null,
-                        ]
-                    );
+                    try {
+                        OrderLineItem::updateOrCreate(
+                            ['order_id' => $order->id, 'shopify_line_item_id' => $lineItemId],
+                            [
+                                'product_id' => $productId,
+                                'product_variant_id' => $variantId,
+                                'title' => $lineItemNode['title'] ?? null,
+                                'sku' => $lineItemNode['sku'] ?? null,
+                                'quantity' => $lineItemNode['quantity'] ?? null,
+                                'price' => $lineItemNode['originalUnitPriceSet']['shopMoney']['amount'] ?? null,
+                            ]
+                        );
+                    } catch (\Throwable $e) {
+                        // Debug context for "Out of range value for column
+                        // shopify_line_item_id" type errors - shows exactly
+                        // what Shopify sent, what PHP computed from it, and
+                        // this environment's actual live column definition,
+                        // so a schema/environment mismatch is visible
+                        // directly in the log instead of guessing blind.
+                        Log::error('Failed to save order line item - debug context', [
+                            'shop' => $shop->name,
+                            'order_shopify_id' => $node['legacyResourceId'] ?? null,
+                            'raw_line_item_gid' => $rawGid,
+                            'computed_line_item_id' => $lineItemId,
+                            'computed_line_item_id_type' => gettype($lineItemId),
+                            'php_int_max' => PHP_INT_MAX,
+                            'php_int_size_bits' => PHP_INT_SIZE * 8,
+                            'live_column_definition' => collect(
+                                \Illuminate\Support\Facades\DB::select(
+                                    "SHOW FULL COLUMNS FROM order_line_items WHERE Field = 'shopify_line_item_id'"
+                                )
+                            )->first(),
+                            'exception' => $e->getMessage(),
+                        ]);
+
+                        throw $e;
+                    }
                 }
 
                 foreach ($node['fulfillments'] ?? [] as $fulfillmentNode) {
