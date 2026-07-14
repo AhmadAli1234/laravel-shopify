@@ -37,8 +37,14 @@ return new class extends Migration
         Schema::create('failed_jobs', function (Blueprint $table) {
             $table->id();
             $table->string('uuid')->unique();
-            $table->string('connection');
-            $table->string('queue');
+            // Explicit shorter length (vs. the 191-char global default) so
+            // this composite index fits under older MySQL/MariaDB's ~1000
+            // byte index key limit under utf8mb4 (two 191-char columns
+            // alone would already be ~1528 bytes). connection/queue are
+            // just driver/queue names ("redis", "webhooks"), never anywhere
+            // near 100 characters in practice.
+            $table->string('connection', 100);
+            $table->string('queue', 100);
             $table->longText('payload');
             $table->longText('exception');
             $table->timestamp('failed_at')->useCurrent();
