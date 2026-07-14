@@ -25,6 +25,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Older MySQL/MariaDB (common on shared hosting) can't index a full
+        // varchar(255) column under utf8mb4 - 255 chars x 4 bytes = 1020
+        // bytes, over the ~1000 byte index key limit. This is the standard
+        // Laravel fix: default to 191 chars (x4 = 764 bytes) for indexed
+        // string columns so migrations like password_reset_tokens (email as
+        // primary key) don't fail with "Specified key was too long".
+        Schema::defaultStringLength(191);
+
         $this->applyDatabaseDrivenAppUrl();
     }
 
