@@ -58,7 +58,13 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'strict' => true,
-            'engine' => null,
+            // Explicitly InnoDB, not left to the server's own default -
+            // some hosts (seen on a cPanel deployment) default to MyISAM,
+            // which silently ignores foreign key constraints and has no
+            // crash-safe transactions, unlike local dev environments that
+            // typically default to InnoDB. Forcing it here keeps schema
+            // behavior consistent across environments.
+            'engine' => 'InnoDB',
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
@@ -78,7 +84,13 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'strict' => true,
-            'engine' => null,
+            // Explicitly InnoDB, not left to the server's own default -
+            // some hosts (seen on a cPanel deployment) default to MyISAM,
+            // which silently ignores foreign key constraints and has no
+            // crash-safe transactions, unlike local dev environments that
+            // typically default to InnoDB. Forcing it here keeps schema
+            // behavior consistent across environments.
+            'engine' => 'InnoDB',
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],

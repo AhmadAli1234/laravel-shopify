@@ -213,7 +213,7 @@ class BackfillShopOrdersJob implements ShouldQueue
                 foreach ($node['lineItems']['edges'] ?? [] as $lineItemEdge) {
                     $lineItemNode = $lineItemEdge['node'];
                     $rawGid = $lineItemNode['id'];
-                    $lineItemId = (int) Str::afterLast($rawGid, '/');
+                    $lineItemId = Str::afterLast($rawGid, '/');
 
                     $productId = isset($lineItemNode['product']['legacyResourceId'])
                         ? Product::where('shop_id', $shop->id)
