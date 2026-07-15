@@ -285,7 +285,7 @@ class BackfillShopOrdersJob implements ShouldQueue
                 }
 
                 foreach ($node['transactions'] ?? [] as $transactionNode) {
-                    $transactionId = (int) Str::afterLast($transactionNode['id'], '/');
+                    $transactionId = Str::afterLast($transactionNode['id'], '/');
 
                     OrderTransaction::updateOrCreate(
                         [
