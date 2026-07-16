@@ -17,7 +17,7 @@ Artisan::command('inspire', function () {
  * --stop-when-empty exits as soon as the queue drains; --max-time=55 forces
  * an exit before the next minute's schedule:run invocation either way.
  */
-Schedule::command('queue:work --stop-when-empty --max-time=55 --sleep=1 --tries=3')
+Schedule::command('queue:work')
     ->everyMinute()
     ->withoutOverlapping();
 
